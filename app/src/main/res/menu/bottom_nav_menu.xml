@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/navigation_home"
+        android:icon="@drawable/ico_home"
+        android:enabled="true"
+        android:title="Trang chủ" />
+
+    <item
+        android:id="@+id/navigation_search"
+        android:icon="@drawable/ico_search"
+        android:title="Tìm kiếm" />
+
+    <item
+        android:id="@+id/navigation_identify"
+        android:icon="@drawable/ico_identify"
+        android:title="Camera" />
+    <item
+        android:id="@+id/navigation_library"
+        android:icon="@drawable/ico_library"
+        android:title="Thư viện" />
+</menu>

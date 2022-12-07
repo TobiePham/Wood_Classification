@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "813586148375",
+    "project_id": "woody-5c79f",
+    "storage_bucket": "woody-5c79f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813586148375:android:9f67af28432b63fac6c052",
+        "android_client_info": {
+          "package_name": "com.example.woody"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "813586148375-jjtp936cevt0mah135rdmtn8i3jiq5f2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrr5Pdjzy7K46KPCqGSChPxD0LQgXLpl0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "813586148375-jjtp936cevt0mah135rdmtn8i3jiq5f2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
