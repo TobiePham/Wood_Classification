@@ -1,81 +1,57 @@
 package com.example.woody.ui.identify;
 
-import static androidx.core.view.ViewCompat.getDisplay;
-
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
 import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 
-import android.os.Environment;
 import android.provider.MediaStore;
-import android.util.Rational;
 import android.util.Size;
 import android.view.LayoutInflater;
 
-import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.activity.result.contract.ActivityResultContract;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.core.Camera;
-import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
-import androidx.camera.core.ViewPort;
-import androidx.camera.core.internal.utils.ImageUtil;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import com.example.woody.R;
+import com.example.woody.entity.Wood;
 import com.example.woody.ml.ConvertModelMobilenetv3244;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.gson.Gson;
 
+import org.checkerframework.checker.units.qual.A;
+import org.checkerframework.checker.units.qual.C;
 import org.tensorflow.lite.DataType;
-import org.tensorflow.lite.support.common.ops.NormalizeOp;
-import org.tensorflow.lite.support.image.ImageProcessor;
-import org.tensorflow.lite.support.image.TensorImage;
-import org.tensorflow.lite.support.image.ops.ResizeOp;
-import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp;
-import org.tensorflow.lite.support.image.ops.Rot90Op;
-import org.tensorflow.lite.support.model.Model;
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Date;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.Executor;
 
 
@@ -85,10 +61,11 @@ public class IdentifyFragment extends Fragment {
     private PreviewView previewView;
     private ImageCapture imageCapture;
     private ImageView imageView;
-    private int imageSize = 224;
-    private float idDetected;
+    private int idDetected;
+    private float percent;
     private Bitmap picSelected;
-
+    private FirebaseDatabase database = FirebaseDatabase.getInstance("https://woody-5c79f-default-rtdb.asia-southeast1.firebasedatabase.app");
+    private DatabaseReference myRef= database.getReference("Wood");
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
 
@@ -98,6 +75,9 @@ public class IdentifyFragment extends Fragment {
         retakeBtn = view.findViewById(R.id.retake_button);
         identifyBtn = view.findViewById(R.id.cbtn);
         libraryBtn = view.findViewById(R.id.library_button);
+
+
+
 
         captureBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -116,10 +96,8 @@ public class IdentifyFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 classifyImage(picSelected, view.getContext());
-                Bundle bundle = new Bundle();
-                bundle.putFloat("key", idDetected);
-                bundle.putParcelable("BitmapImage", picSelected);
-                Navigation.findNavController(view).navigate(R.id.detailWoodFragment, bundle);
+                //Firebase get infor
+                getWoodFromFirebase(idDetected,view);
             }
         });
 
@@ -147,6 +125,70 @@ public class IdentifyFragment extends Fragment {
 
 
         return view;
+    }
+
+    private void getWoodFromFirebase(int idDetected, View view) {
+        myRef.orderByChild("id").equalTo(idDetected).addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                Wood wood= snapshot.getValue(Wood.class);
+                Bundle bundle = new Bundle();
+                Gson gson = new Gson();
+                String woodDetailJson = gson.toJson(wood);
+                bundle.putString("wood", woodDetailJson);
+//                bundle.putParcelable("BitmapImage", picSelected);
+                bundle.putString("percent",(percent*100)+"%");
+                Navigation.findNavController(view).navigate(R.id.detailWoodFragment, bundle);
+            }
+
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+
+
+        });
+//        ArrayList<Wood> woods= new ArrayList<>();
+//        myRef.addListenerForSingleValueEvent(new ValueEventListener() {
+//            @Override
+//            public void onDataChange(DataSnapshot dataSnapshot) {
+//                // This method is called once with the initial value and again
+//                // whenever data at this location is updated.
+//                for (DataSnapshot data: dataSnapshot.getChildren()) {
+//                    Wood wood= data.getValue((Wood.class));
+//                    woods.add(wood);
+//                    // here you can access to name property like university.name
+//
+//                    System.out.println(wood.getDisplayName());
+//                }
+//
+////                Bundle bundle = new Bundle();
+////                bundle.putFloat("key", idDetected);
+////                bundle.putParcelable("BitmapImage", picSelected);
+////                Navigation.findNavController(view).navigate(R.id.detailWoodFragment, bundle);
+//
+//            }
+//
+//            @Override
+//            public void onCancelled(DatabaseError error) {
+//                // Failed to read value
+//            }
+//        });
     }
 
     @Override
@@ -211,43 +253,21 @@ public class IdentifyFragment extends Fragment {
 
     private void classifyImage(Bitmap image, Context context) {
         try {
+
+
             ConvertModelMobilenetv3244 model = ConvertModelMobilenetv3244.newInstance(context);
-            Bitmap resized= Bitmap.createScaledBitmap(image,224,224,false);
-//            // Creates inputs for reference.
+
+            // Creates inputs for reference.
             TensorBuffer inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 224, 224, 3}, DataType.FLOAT32);
-//            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 *1 * imageSize * imageSize * 3);
-//            byteBuffer.order(ByteOrder.nativeOrder());
-//
-//            byteBuffer.order(ByteOrder.nativeOrder());
-//
-//            int[] intValues = new int[imageSize * imageSize];
-//            image.getPixels(intValues, 0, image.getWidth(), 0, 0, image.getWidth(), image.getHeight());
-//            int pixel = 0;
-//            //iterate over each pixel and extract R, G, and B values. Add those values individually to the byte buffer.
-//            for(int i = 0; i < imageSize; i ++){
-//                for(int j = 0; j < imageSize; j++){
-//                    int val = intValues[pixel++]; // RGB
-//                    byteBuffer.putFloat(((val >> 16) & 0xFF) * (1.f / 1));
-//                    byteBuffer.putFloat(((val >> 8) & 0xFF) * (1.f / 1));
-//                    byteBuffer.putFloat((val & 0xFF) * (1.f / 1));
-//                }
-//            }
             ByteBuffer b= convertBitmapToByteBuffer(image);
             inputFeature0.loadBuffer(b);
-//            ImageProcessor imageProcessor = new ImageProcessor.Builder()
-//                    .add(new ResizeWithCropOrPadOp(224, 224))
-//                    .add(new ResizeOp(224, 224, ResizeOp.ResizeMethod.BILINEAR))
-//                    .build();
-//
-//            TensorImage tensorImage = new TensorImage((DataType.FLOAT32));
-//            tensorImage.load(image);
-//            tensorImage = imageProcessor.process(tensorImage);
-//            Bitmap b2= tensorImage.getBitmap();
-//            inputFeature0.loadBuffer(tensorImage.getBuffer());
+
 
             // Runs model inference and gets result.
             ConvertModelMobilenetv3244.Outputs outputs = model.process(inputFeature0);
             TensorBuffer outputFeature0 = outputs.getOutputFeature0AsTensorBuffer();
+
+            // Runs model inference and gets result.
 
             float[] confidences = outputFeature0.getFloatArray();
 
@@ -261,6 +281,7 @@ public class IdentifyFragment extends Fragment {
                 System.out.println((i+1) + "tỉ lệ" + confidences[i]);
             }
             idDetected = maxPos + 1;
+            percent=confidences[maxPos];
             // Releases model resources if no longer used.
             model.close();
         } catch (IOException e) {
